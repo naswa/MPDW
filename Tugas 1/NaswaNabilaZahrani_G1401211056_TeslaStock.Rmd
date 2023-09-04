@@ -277,8 +277,6 @@ Pada fungsi `ses()` , terdapat beberapa argumen yang umum digunakan, yaitu nilia
 
 Nilai `y` adalah nilai data deret waktu, `gamma` adalah parameter pemulusan untuk komponen musiman, `beta` adalah parameter pemulusan untuk tren, dan `alpha` adalah parameter pemulusan untuk stasioner, serta `h` adalah banyaknya periode yang akan diramalkan.
 
-Kasus di atas merupakan contoh inisialisasi nilai parameter $\lambda$ dengan nilai `alpha` 0,2 dan 0,7 dan banyak periode data yang akan diramalkan adalah sebanyak 10 periode. Selanjutnya akan digunakan fungsi `HoltWinters()` dengan nilai inisialisasi parameter dan panjang periode peramalan yang sama dengan fungsi `ses()` .
-
 ```{r}
 #Cara 2 (fungsi Holtwinter)
 ses1<- HoltWinters(train.ts, gamma = FALSE, beta = FALSE, alpha = 0.2)
@@ -392,7 +390,7 @@ colnames(akurasi.2) <- c("Akurasi lamda=0.7")
 akurasi.2
 ```
 
-Berdasarkan nilai SSE, MSE, RMSE, dan MAPE di antara kedua parameter, nilai parameter $\lambda=0,2$ menghasilkan akurasi yang lebih baik dibanding $\lambda=0,7$ . Hal ini dilihat dari nilai masing-masing ukuran akurasi yang lebih kecil. Berdasarkan nilai MAPE-nya, hasil ini dapat dikategorikan sebagai peramalan sangat baik.
+Berdasarkan nilai SSE, MSE, RMSE, dan MAPE di antara kedua parameter, nilai parameter $\lambda=0,7$ menghasilkan akurasi yang lebih baik dibanding $\lambda=0,2$ . Hal ini dilihat dari nilai masing-masing ukuran akurasi yang lebih kecil. Berdasarkan nilai MAPE-nya, hasil ini dapat dikategorikan sebagai peramalan sangat baik.
 
 #### Akurasi Data Uji
 
@@ -420,7 +418,7 @@ row.names(akurasitesting2)<- c("MSE1", "MSE2", "MSEopt")
 akurasitesting2
 ```
 
-Selain dengan cara di atas, perhitungan nilai akurasi dapat menggunakan fungsi `accuracy()` dari *package* `forecast` . Penggunaannya yaitu dengan menuliskan `accuracy(hasil ramalan, kondisi aktual)` . Contohnya adalah sebagai berikut.
+Selain dengan cara di atas, perhitungan nilai akurasi dapat menggunakan fungsi `accuracy()` dari *package* `forecast` . Penggunaannya yaitu dengan menuliskan `accuracy(hasil ramalan, kondisi aktual)` . 
 
 ```{r}
 #cara lain
