@@ -1,0 +1,216 @@
+---
+title: "MPDW 2"
+author: "Naswa Nabila Zahrani"
+date: "2023-09-12"
+output: html_document
+---
+
+## Pemanggilan *Packages*
+
+```{r}
+library(dplyr)
+library(TTR)
+library(forecast)
+library(lmtest) #digunakan untuk uji formal pendeteksian autokorelasi
+library(orcutt) #untuk membuat model regresi Cochrane-Orcutt
+library(HoRM) #untuk membuat model regresi Hildreth-Lu
+```
+
+## Input Data
+```{r}
+library(rio)
+datp2 <- import("https://raw.githubusercontent.com/naswa/MPDW/main/Pertemuan%202/SanBenito.csv")
+View(datp2)
+Y = datp2$`Price(Dollars/Unit)`
+X1 = datp2$HarvestedAcres
+X2 = datp2$`Yield(Unit/Acre)`
+X3 = datp2$Production
+X4 = datp2$`Value(Dollars)`
+Data = data.frame(Y,X1,X2,X3,X4)
+```
+
+## Regresi
+```{r}
+#Pembuatan Model Regresi
+#model regresi
+model<- lm(Y~X1++X2+X3+X4, data = Data)
+summary(model)
+```
+Model yang dihasilkan adalah $$y_i=-251.1+0.4185x_1+306.0x_2-0.1929x_3+0.00008394x_4$$ Berdasarkan ringkasan model dapat diketahui bahwa hasil uji F memiliki *p-value* \< $\alpha$ (5%). Artinya, minimal terdapat satu variabel yang berpengaruh nyata terhadap model. Hasil uji-t parsial kedua parameter regresi, yaitu intersep dan koefisien regresi juga menunjukkan hal yang sama, yaitu memiliki *p-value* \< $\alpha$ (5%) sehingga nyata dalam taraf 5%. 
+Selanjutnya dapat dilihat juga nilai $R^2=0.9198$. Artinya, sebesar 91.98% keragaman nilai Price dapat dijelaskan oleh peubah HarvestedAcres,Yield(Unit/Acre),Production,dan Value(Dollars). Hasil ini menunjukkan hasil yang bagus, seolah mendapatkan hasil terbaik. Namun, kita perlu melakukan uji terhadap sisaannya seperti berikut ini.
+
+
+```{r}
+#sisaan dan fitted value
+sisaan<- residuals(model)
+fitValue<- predict(model)
+
+#Diagnostik dengan eksploratif
+par(mfrow = c(2,2))
+qqnorm(sisaan)
+qqline(sisaan, col = "steelblue", lwd = 2)
+plot(fitValue, sisaan, col = "steelblue", pch = 20, xlab = "Sisaan", ylab = "Fitted Values", main = "Sisaan vs Fitted Values")
+abline(a = 0, b = 0, lwd = 2)
+hist(sisaan, col = "steelblue")
+plot(seq(1,41,1), sisaan, col = "steelblue", pch = 20, xlab = "Sisaan", ylab = "Order", main = "Sisaan vs Order")
+lines(seq(1,41,1), sisaan, col = "red")
+abline(a = 0, b = 0, lwd = 2)
+```
+
+Dua plot di samping kiri digunakan untuk melihat apakah sisaan menyebar normal. Normal Q-Q Plot di atas menunjukkan bahwa sisaan cenderung menyebar normal begitupan histogram dari sisaan . Selanjutnya, dua plot di samping kanan digunakan untuk melihat autokorelasi. Plot Sisaan vs *Fitted Value* dan Plot Sisaan vs *Order* menunjukkan adanya pola pada sisaan. Untuk lebih lanjut akan digunakan uji formal melihat normalitas sisaan dan plot ACF dan PACF untuk melihat apakah ada autokorelasi atau tidak.
+
+```{r}
+#Melihat Sisaan Menyebar Normal/Tidak
+#H0: sisaan mengikuti sebaran normal
+#H1: sisaan tidak mengikuti sebaran normal
+shapiro.test(sisaan)
+ks.test(sisaan, "pnorm", mean=mean(sisaan), sd=sd(sisaan))
+```
+
+Berdasarkan uji formal Saphiro-Wilk dan Kolmogorov-Smirnov didapatkan nilai *p-value* \> $\alpha$ (5%). Artinya, cukup bukti untuk menyatakan sisaan berdistribusi normal.
+
+```{r}
+#ACF dan PACF identifikasi autokorelasi
+par(mfrow = c(1,2))
+acf(sisaan)
+pacf(sisaan)
+```
+Berdasarkan plot ACF dan PACF, terlihat  plot ACF pada lag 2,3,4 signifikan. Namun, untuk lebih memastikan akan dilakukan uji formal dengan uji Durbin Watson.
+
+```{r}
+#Deteksi autokorelasi dengan uji-Durbin Watson
+#H0: tidak ada autokorelasi
+#H1: ada autokorelasi
+dwtest(model)
+```
+Berdasarkan hasil DW Test, didapatkan nilai $DW = 0.76635$ dan p-value = $5.261e-11$. Berdasarkan tabel Durbin-Watson diperoleh nilai $DL = 1.2958$ dan $DU = 1.7205$. Nilai DW < DL dan (4-DU)> DU. Artinya, Terdapat auto korelasi positif . Namun, dengan nilai p-value \< 0.05 dapat disimpulkan bahwa tolak H0, cukup bukti mengatakan adanya autokorelasi. Oleh karena itu, diperlukan penangan autokorelasi. Penanganan yang akan digunakan menggunakan dua metode, yaitu Cochrane-Orcutt dan Hildret-Lu.
+
+## Penanganan Autokorelasi
+
+### Metode Cochrane-Orcutt
+
+Penanganan metode Cochrane-Orcutt dapat dilakukan dengan bantuan packages Orcutt pada aplikasi `R` maupun secara manual. Berikut ini ditampilkan cara menggunakan bantuan `library` *packages* `Orcutt`.
+
+```{r}
+#Penanganan Autokorelasi Cochrane-Orcutt
+modelCO<-cochrane.orcutt(model)
+modelCO
+```
+Hasil keluaran model setelah dilakukan penanganan adalah sebagai berikut. $$y_i=685.161612+0.132082x_1+58.080773x_2-0.093698x_3+0.000063x_4$$ Hasil juga menunjukkan bahwa nilai DW dan p-value meningkat menjadi $2.40248$ dan $0.9215$. Nilai DW masih pada rentang dimana DU \< DW namun 4-DU \< DU . Hal tersebut berarti bahwa masih terdapat adanya autokorelasi atau berarti bahwa uji diatas belum mampu menangani adanya autokorelasi pada model. Tetapi nilai *p-value* \> 0.05, menyatakan belum cukup bukti menyatakan bahwa sisaan terdapat autokorelasi pada taraf nyata 5%. Untuk nilai $ρ ̂$ optimum yang digunakan adalah $0.893706$
+Nilai tersebut dapat diketahui dengan *syntax* berikut.
+```{r}
+#Rho optimum
+rho<- modelCO$rho
+rho
+```
+Selanjutnya akan dilakukan transformasi secara manual dengan syntax berikut ini.
+
+```{r}
+#Transformasi Manual
+Y.trans<- Y[-1]-Y[-41]*rho
+X1.trans<- X1[-1]-X1[-41]*rho
+X2.trans<- X2[-1]-X2[-41]*rho
+X3.trans<- X3[-1]-X3[-41]*rho
+X4.trans<- X4[-1]-X4[-41]*rho
+modelCOmanual<- lm(Y.trans~X1.trans+X2.trans+X3.trans+X4.trans)
+summary(modelCOmanual)
+```
+Hasil model transformasi bukan merupakan model sesungguhnya. Koefisien regresi masih perlu dicari kembali mengikuti $β_0^*=β_0+ρ ̂β_0$ dan $β_1^*=β_1$.
+
+```{r}
+#Mencari Penduga Koefisien Regresi setelah Transformasi ke Persamaan Awal
+b0.bintang <- modelCOmanual$coefficients[1]
+b0 <- b0.bintang/(1-rho)
+b1 <- modelCOmanual$coefficients[2]
+b2 <- modelCOmanual$coefficients[3]
+b3 <- modelCOmanual$coefficients[4]
+b4 <- modelCOmanual$coefficients[5]
+b0
+b1
+b2
+b3
+b4
+```
+Hasil perhitungan koefisien regresi tersebut akan menghasilkan hasil yang sama dengan model yang dihasilkan menggunakan *packages*.
+
+### Metode Hildreth-Lu
+Penanganan kedua adalah menggunakan metode Hildreth-Lu. Metode ini akan mencari nilai SSE terkecil dan dapat dicari secara manual maupun menggunakan packages. Jika menggunakan packages, gunakan `library` *packages* `HORM`.
+
+```{r}
+#Penanganan Autokorelasi Hildreth lu
+# Hildreth-Lu
+hildreth.lu.func<- function(r, model){
+  x1 <- model.matrix(model)[,2]
+  x2 <- model.matrix(model)[,3]
+  x3 <- model.matrix(model)[,4]
+  x4 <- model.matrix(model)[,5]
+  y <- model.response(model.frame(model))
+  n <- length(y)
+  t <- 2:n
+  y <- y[t]-r*y[t-1]
+  x1 <- x1[t]-r*x1[t-1]
+  x2 <- x2[t]-r*x2[t-1]
+  x3 <- x3[t]-r*x3[t-1]
+  x4 <- x4[t]-r*x4[t-1]
+  
+  return(lm(y~x1+x2+x3+x4))
+}
+
+#Pencariab rho yang meminimumkan SSE
+r <- c(seq(0.1,0.9, by= 0.1))
+tab <- data.frame("rho" = r, "SSE" = sapply(r, function(i){deviance(hildreth.lu.func(i, model))}))
+round(tab, 4)
+```
+Pertama-tama akan dicari di mana kira-kira $ρ$ yang menghasilkan SSE minimum. Pada hasil di atas terlihat $ρ$ minimum ketika 0.9. Namun, hasil tersebut masih kurang teliti sehingga akan dicari kembali $ρ$ yang lebih optimum dengan ketelitian yang lebih. Jika sebelumnya jarak antar $ρ$ yang dicari adalah 0.1, kali ini jarak antar $ρ$ adalah 0.001 dan dilakukan pada selang 0.7 sampai dengan 0.9.
+```{r}
+#Rho optimal di sekitar 0.4
+rOpt <- seq(0.7,0.9, by= 0.001)
+tabOpt <- data.frame("rho" = rOpt, "SSE" = sapply(rOpt, function(i){deviance(hildreth.lu.func(i, model))}))
+head(tabOpt[order(tabOpt$SSE),])
+```
+
+```{r}
+#Grafik SSE optimum
+par(mfrow = c(1,1))
+plot(tab$SSE ~ tab$rho , type = "l", xlab = "Rho", ylab = "SSE")
+abline(v = tabOpt[tabOpt$SSE==min(tabOpt$SSE),"rho"], lty = 2, col="red",lwd=2)
+text(x=0.894, y=190416.6, labels = "rho=0.894", cex = 0.8)
+```
+Perhitungan yang dilakukan aplikasi `R` menunjukkan bahwa nilai $ρ$ optimum, yaitu saat SSE terkecil terdapat pada nilai $ρ=0.894$. Hal tersebut juga ditunjukkan pada plot. Selanjutnya, model dapat didapatkan dengan mengevaluasi nilai $ρ$ ke dalam fungsi `hildreth.lu.func`, serta dilanjutkan dengan pengujian autokorelasi dengan uji Durbin-Watson. Namun, setelah pengecekan tersebut tidak lupa koefisien regresi tersebut digunakan untuk transformasi balik. Persamaan hasil transformasi itulah yang menjadi persamaan sesungguhnya.
+
+```{r}
+#Model terbaik
+modelHL <- hildreth.lu.func(0.894, model)
+summary(modelHL)
+
+#Transformasi Balik
+cat("y = ", coef(modelHL)[1]/(1-0.894), "+", coef(modelHL)[2],"x1","+",coef(modelHL)[3],"x2","+",coef(modelHL)[4],"x3","+",coef(modelHL)[5],"x4", sep = "")
+```
+
+```{r}
+#Deteksi autokorelasi
+dwtest(modelHL)
+```
+Hasil uji durbin-watson bahwa nilai DW masih pada rentang dimana DU \< DW namun 4-DU \< DU . Hal tersebut berarti bahwa masih terdapat adanya autokorelasi atau berarti bahwa uji diatas belum mampu menangani adanya autokorelasi pada model.Namun  *p-value* sebesar $0.9219$, di mana *p-value* \> $\alpha$=5%. Artinya tak tolak $H_0$ atau belum cukup bukti menyatakan bahwa ada autokorelasi dalam data Price dengan metode Hildreth-Lu pada taraf nyata 5%.
+
+Terakhir, akan dibandingkan nilai SSE dari ketiga metode (metode awal, metode Cochrane-Orcutt, dan Hildreth-Lu).
+```{r}
+#Perbandingan
+sseModelawal <- anova(model)$`Sum Sq`[5]
+sseModelCO <- anova(modelCOmanual)$`Sum Sq`[5]
+sseModelHL <- anova(modelHL)$`Sum Sq`[5]
+mseModelawal <- sseModelawal/length(Y)
+mseModelCO <- sseModelCO/length(Y)
+mseModelHL <- sseModelHL/length(Y)
+akurasi <- matrix(c(sseModelawal,sseModelCO,sseModelHL,
+                    mseModelawal,mseModelCO,mseModelHL),nrow=2,ncol=3,byrow = T)
+colnames(akurasi) <- c("Model Awal", "Model Cochrane-Orcutt", "Model Hildreth-Lu")
+row.names(akurasi) <- c("SSE","MSE")
+akurasi
+```
+Berdasarkan hasil tersebut dapat diketahui bahwa hasil penanganan autokorelasi dengan metode Cochrane-Orcutt dan Hildreth-Lu memiliki SSE yang hampir sama, sebesar $190416.504$ dan $190416.584$ dan lebih baik dibandingkan model awal ketika autokorelasi masih terjadi, yaitu sebesar $599423.9$.
+
+## Simpulan
+
+Autokorelasi yang terdapat pada data Wine Production San Benito terjadi akibat adanya korelasi di antara unsur penyusunnya. Indikator Price sebagai hasil dari proses produksi wine sangat rawan menjadi penyebab adanya autokorelasi. Adanya autokorelasi menyebabkan model regresi kurang baik karena akan meingkatkan galatnya. Autokorelasi dapat dideteksi secara eksploratif melalui plot sisaan, ACF, dan PACF, serta dengan uji formal Durbin-Watson. Akan tetapi autokorelasi tersebut dapat ditangani dengan metode Cochrane-Orcutt dan Hildreth-Lu. Dibutuhkan metode lain yang lebih pas untuk menangani autokorelasi pada data yang dimiliki.
+
