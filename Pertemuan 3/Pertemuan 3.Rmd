@@ -1,5 +1,5 @@
 ---
-title: "Peubah Lag"
+title: "Regresi Peubah Lag"
 author: "Naswa Nabila Zahrani"
 date: "2023-09-18"
 output: html_document
