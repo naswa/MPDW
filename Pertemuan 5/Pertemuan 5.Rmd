@@ -18,9 +18,8 @@ Pada dasarnya, pembangkitan data ARIMA akan menghasilkan data yang stasioner dal
 
 ```{r}
 library("rio")
-datal <- import("https://raw.githubusercontent.com/naswa/MPDW/main/Tugas%201/tesla_stocks%20(1).csv")
-data0 = datal[1008:1512,]
-stas <- ts(data0$Close)
+datal <- import("https://raw.githubusercontent.com/naswa/MPDW/main/Pertemuan%205/Tesla%20Arima.csv")
+stas <- ts(datal$Close)
 stas
 ```
 
@@ -54,12 +53,12 @@ $H_0$ : Data tidak stasioner dalam rataan
 
 $H_1$ : Data stasioner dalam rataan
 
-Berdasarkan uji ADF tersebut, didapat *p-value* sebesar 0.7945 yang lebih besar dari taraf nyata 5% sehinggatak tolak $H_0$ dan menandakan bahwa data tidak stasioner dalam rataan. Hal ini sesuai dengan hasil eksplorasi menggunakan plot time series dan plot ACF.
+Berdasarkan uji ADF tersebut, didapat *p-value* sebesar 0.9295 yang lebih besar dari taraf nyata 5% sehinggatak tolak $H_0$ dan menandakan bahwa data tidak stasioner dalam rataan. Hal ini sesuai dengan hasil eksplorasi menggunakan plot time series dan plot ACF.
 
 ### Plot Box-Cox
 
 ```{r}
-index <- seq(1:505)
+index <- seq(1:150)
 bc = boxcox(stas~index, lambda = seq(0,1,by=0.01))
 #Nilai Rounded Lambda
 lambda <- bc$x[which.max(bc$y)]
@@ -68,14 +67,14 @@ lambda
 bc$x[bc$y > max(bc$y) - 1/2 * qchisq(.95,1)]
 ```
 
-Gambar di atas menunjukkan nilai *rounded value* ($\lambda$) optimum sebesar **0.61** dan pada selang kepercayaan 95% nilai memiliki batas bawah **0.32** dan batas atas **0.92**. Selang tersebut tidak memuat nilai satu sehingga dapat dikatakan bahwa data tidak stasioner dalam ragam.
+Gambar di atas menunjukkan nilai *rounded value* ($\lambda$) optimum sebesar **1** dan pada selang kepercayaan 95% nilai memiliki batas bawah **0.48** dan batas atas **1**. Selang tersebut  memuat nilai satu sehingga dapat dikatakan bahwa data  stasioner dalam ragam.
 
 ### Partisi Data
 
 #### Bagian 1
 
 ```{r}
-dt_stas1 <- stas[1:150] |> ts()
+dt_stas1 <- stas[1:127] |> ts()
 mean(dt_stas1)
 var(dt_stas1)
 ```
@@ -109,12 +108,12 @@ $H_0$ : Data tidak stasioner dalam rataan
 
 $H_1$ : Data stasioner dalam rataan
 
-Berdasarkan uji ADF tersebut, didapat *p-value* sebesar 0.803 yang lebih besar dari taraf nyata 5% sehingga tak tolak $H_0$ dan menandakan bahwa data tidak stasioner dalam rataan. Hal ini sesuai dengan hasil eksplorasi menggunakan plot time series dan plot ACF.
+Berdasarkan uji ADF tersebut, didapat *p-value* sebesar 0.8719 yang lebih besar dari taraf nyata 5% sehingga tak tolak $H_0$ dan menandakan bahwa data tidak stasioner dalam rataan. Hal ini sesuai dengan hasil eksplorasi menggunakan plot time series dan plot ACF.
 
 #### Plot Boxcox
 
 ```{r}
-index <- seq(1:150)
+index <- seq(1:127)
 bc = boxcox(dt_stas1~index, lambda = seq(-2,4,by=1))
 #Nilai Rounded Lambda
 lambda <- bc$x[which.max(bc$y)]
@@ -123,12 +122,12 @@ lambda
 bc$x[bc$y > max(bc$y) - 1/2 * qchisq(.95,1)]
 ```
 
-Gambar di atas menunjukkan nilai *rounded value* ($\lambda$) optimum sebesar **-0.7878788** dan pada selang kepercayaan 95% nilai memiliki batas bawah **-2.00000000** dan batas atas **0.42424242**. Selang tersebut tidak memuat nilai satu sehingga dapat dikatakan bahwa data bangkitan tidak stasioner dalam ragam.
+Gambar di atas menunjukkan nilai *rounded value* ($\lambda$) optimum sebesar **0.1818182** dan pada selang kepercayaan 95% nilai memiliki batas bawah **-0.90909091** dan batas atas **1.33333333**. Selang tersebut memuat nilai satu sehingga dapat dikatakan bahwa data bangkitan stasioner dalam ragam.
 
 #### Bagian 2
 
 ```{r}
-dt_stas2 <- stas[1:435] |> ts()
+dt_stas2 <- stas[1:140] |> ts()
 mean(dt_stas2)
 var(dt_stas2)
 ```
@@ -162,12 +161,12 @@ $H_0$ : Data tidak stasioner dalam rataan
 
 $H_1$ : Data stasioner dalam rataan
 
-Berdasarkan uji ADF tersebut, didapat *p-value* sebesar 0.344 yang lebih besar dari taraf nyata 5% sehingga tak tolak $H_0$ dan menandakan bahwa data tidak stasioner dalam rataan. Hal ini sesuai dengan hasil eksplorasi menggunakan plot time series dan plot ACF.
+Berdasarkan uji ADF tersebut, didapat *p-value* sebesar 0.9126 yang lebih besar dari taraf nyata 5% sehingga tak tolak $H_0$ dan menandakan bahwa data tidak stasioner dalam rataan. Hal ini sesuai dengan hasil eksplorasi menggunakan plot time series dan plot ACF.
 
 #### Plot Boxcox
 
 ```{r}
-index <- seq(1:435)
+index <- seq(1:140)
 bc = boxcox(dt_stas2~index, lambda = seq(-2,6,by=0.01))
 #Nilai Rounded Lambda
 lambda <- bc$x[which.max(bc$y)]
@@ -176,4 +175,4 @@ lambda
 bc$x[bc$y > max(bc$y) - 1/2 * qchisq(.95,1)]
 ```
 
-Gambar di atas menunjukkan nilai *rounded value* ($\lambda$) optimum sebesar **-1.02** dan pada selang kepercayaan 95% nilai memiliki batas bawah **-1.52** dan batas atas **-0.51**. Selang tersebut tidak  memuat nilai satu sehingga dapat dikatakan bahwa data tidak stasioner dalam ragam.
+Gambar di atas menunjukkan nilai *rounded value* ($\lambda$) optimum sebesar **0.13** dan pada selang kepercayaan 95% nilai memiliki batas bawah **-0.71** dan batas atas **1.02**. Selang tersebut memuat nilai satu sehingga dapat dikatakan bahwa data stasioner dalam ragam.
